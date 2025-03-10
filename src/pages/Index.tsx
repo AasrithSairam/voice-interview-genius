@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,13 +8,17 @@ import ApiKeyInput from '@/components/ApiKeyInput';
 import { Mic, MicOff, RefreshCw } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 
-// Define different question sets to avoid repetition
 const IT_QUESTIONS = [
   "Tell me about your experience with software development.",
   "How do you handle debugging complex issues?",
   "What programming languages are you most comfortable with?",
   "Describe a challenging project you worked on.",
   "How do you stay updated with new technologies?",
+  "What is your understanding of agile methodologies?",
+  "How do you approach testing and quality assurance?",
+  "Describe your experience with version control systems.",
+  "How do you handle technical debt?",
+  "What's your approach to code reviews?",
 ];
 
 const ADVANCED_IT_QUESTIONS = [
@@ -23,15 +26,25 @@ const ADVANCED_IT_QUESTIONS = [
   "How do you ensure code quality in your projects?",
   "Describe your experience with cloud infrastructure.",
   "How do you approach system design for scalable applications?",
-  "What CI/CD practices have you implemented in your projects?",
+  "What CI/CD practices have you implemented?",
+  "How do you handle database optimization?",
+  "Explain your experience with microservices.",
+  "How do you approach API security?",
+  "Describe your experience with containerization.",
+  "What monitoring and logging practices do you follow?",
 ];
 
 const TECH_LEADERSHIP_QUESTIONS = [
   "How do you mentor junior developers?",
-  "Describe how you've led a technical project from concept to completion.",
-  "How do you balance technical debt with new feature development?",
-  "Tell me about a time you had to make a difficult technical decision.",
-  "How do you promote knowledge sharing within your team?",
+  "Describe how you've led a technical project.",
+  "How do you balance technical debt with new features?",
+  "Tell me about a difficult technical decision you made.",
+  "How do you promote knowledge sharing?",
+  "How do you handle conflicts in a team?",
+  "Describe your approach to technical planning.",
+  "How do you ensure team productivity?",
+  "What's your approach to technical interviews?",
+  "How do you handle project deadlines?",
 ];
 
 const TEAM_MEMBERS = [
@@ -74,19 +87,16 @@ const Index = () => {
   const synthesisRef = useRef<SpeechSynthesis | null>(null);
 
   useEffect(() => {
-    // Check if API key is stored in localStorage
     const storedApiKey = localStorage.getItem('google_api_key');
     if (storedApiKey) {
       setApiKey(storedApiKey);
     }
 
-    // Initialize speech synthesis
     if (window.speechSynthesis) {
       synthesisRef.current = window.speechSynthesis;
     }
 
     return () => {
-      // Clean up speech resources
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
@@ -99,7 +109,6 @@ const Index = () => {
   useEffect(() => {
     if (!apiKey) return;
 
-    // Initialize speech recognition
     if (window.SpeechRecognition || window.webkitSpeechRecognition) {
       const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognitionAPI();
@@ -113,12 +122,10 @@ const Index = () => {
           description: answer,
         });
         
-        // Store user answer
         const updatedAnswers = [...userAnswers];
         updatedAnswers[currentQuestion] = answer;
         setUserAnswers(updatedAnswers);
         
-        // Generate a random score between 70 and 100
         const score = Math.floor(Math.random() * 31) + 70;
         const updatedScores = [...scores];
         updatedScores[currentQuestion] = score;
@@ -132,7 +139,6 @@ const Index = () => {
             speakQuestion(questionSet[currentQuestion + 1]);
           }, 2000);
         } else {
-          // Interview complete
           const avgScore = updatedScores.reduce((sum, score) => sum + score, 0) / updatedScores.length;
           setTotalScore(Math.round(avgScore));
           
@@ -188,14 +194,12 @@ const Index = () => {
   const speakQuestion = (text: string) => {
     if (!synthesisRef.current) return;
     
-    // Cancel any ongoing speech
     synthesisRef.current.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => {
       setIsSpeaking(false);
-      // Only auto-start listening when in the middle of the interview
       if (interviewStarted && text !== "Thank you for completing the interview!") {
         startListening();
       }
@@ -204,17 +208,24 @@ const Index = () => {
   };
 
   const startInterview = () => {
-    // Select a random question set to avoid repetition
-    const questionSets = [IT_QUESTIONS, ADVANCED_IT_QUESTIONS, TECH_LEADERSHIP_QUESTIONS];
-    const selectedQuestionSet = questionSets[Math.floor(Math.random() * questionSets.length)];
-    
-    setQuestionSet(selectedQuestionSet);
     setCurrentQuestion(0);
-    setUserAnswers(new Array(selectedQuestionSet.length).fill(''));
-    setScores(new Array(selectedQuestionSet.length).fill(0));
+    setUserAnswers([]);
+    setScores([]);
     setInterviewComplete(false);
+    
+    const allQuestions = [
+      ...IT_QUESTIONS,
+      ...ADVANCED_IT_QUESTIONS,
+      ...TECH_LEADERSHIP_QUESTIONS,
+    ];
+    
+    const shuffledQuestions = [...allQuestions]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 5);
+    
+    setQuestionSet(shuffledQuestions);
     setInterviewStarted(true);
-    speakQuestion("Welcome to the Source Coders AI Interview. " + selectedQuestionSet[0]);
+    speakQuestion("Welcome to the Source Coders AI Interview. " + shuffledQuestions[0]);
   };
 
   const resetInterview = () => {
@@ -231,6 +242,7 @@ const Index = () => {
     setInterviewComplete(false);
     setUserAnswers([]);
     setScores([]);
+    setQuestionSet([]);
   };
 
   const handleApiKeySet = (key: string) => {
