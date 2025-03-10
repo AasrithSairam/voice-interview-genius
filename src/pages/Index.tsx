@@ -9,12 +9,29 @@ import ApiKeyInput from '@/components/ApiKeyInput';
 import { Mic, MicOff, RefreshCw } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 
+// Define different question sets to avoid repetition
 const IT_QUESTIONS = [
   "Tell me about your experience with software development.",
   "How do you handle debugging complex issues?",
   "What programming languages are you most comfortable with?",
   "Describe a challenging project you worked on.",
   "How do you stay updated with new technologies?",
+];
+
+const ADVANCED_IT_QUESTIONS = [
+  "Explain your approach to writing maintainable code.",
+  "How do you ensure code quality in your projects?",
+  "Describe your experience with cloud infrastructure.",
+  "How do you approach system design for scalable applications?",
+  "What CI/CD practices have you implemented in your projects?",
+];
+
+const TECH_LEADERSHIP_QUESTIONS = [
+  "How do you mentor junior developers?",
+  "Describe how you've led a technical project from concept to completion.",
+  "How do you balance technical debt with new feature development?",
+  "Tell me about a time you had to make a difficult technical decision.",
+  "How do you promote knowledge sharing within your team?",
 ];
 
 const TEAM_MEMBERS = [
@@ -46,6 +63,11 @@ const Index = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [apiKey, setApiKey] = useState<string>('');
   const [interviewStarted, setInterviewStarted] = useState(false);
+  const [questionSet, setQuestionSet] = useState<string[]>([]);
+  const [userAnswers, setUserAnswers] = useState<string[]>([]);
+  const [scores, setScores] = useState<number[]>([]);
+  const [interviewComplete, setInterviewComplete] = useState(false);
+  const [totalScore, setTotalScore] = useState(0);
   const { toast } = useToast();
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -79,8 +101,8 @@ const Index = () => {
 
     // Initialize speech recognition
     if (window.SpeechRecognition || window.webkitSpeechRecognition) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
+      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognitionAPI();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
 
@@ -90,16 +112,33 @@ const Index = () => {
           title: "Your Answer",
           description: answer,
         });
+        
+        // Store user answer
+        const updatedAnswers = [...userAnswers];
+        updatedAnswers[currentQuestion] = answer;
+        setUserAnswers(updatedAnswers);
+        
+        // Generate a random score between 70 and 100
+        const score = Math.floor(Math.random() * 31) + 70;
+        const updatedScores = [...scores];
+        updatedScores[currentQuestion] = score;
+        setScores(updatedScores);
+        
         stopListening();
         
-        if (currentQuestion < IT_QUESTIONS.length - 1) {
+        if (currentQuestion < questionSet.length - 1) {
           setTimeout(() => {
             setCurrentQuestion(prev => prev + 1);
-            speakQuestion(IT_QUESTIONS[currentQuestion + 1]);
+            speakQuestion(questionSet[currentQuestion + 1]);
           }, 2000);
         } else {
+          // Interview complete
+          const avgScore = updatedScores.reduce((sum, score) => sum + score, 0) / updatedScores.length;
+          setTotalScore(Math.round(avgScore));
+          
           setTimeout(() => {
-            speakQuestion("Thank you for completing the interview!");
+            speakQuestion(`Thank you for completing the interview! Your overall score is ${Math.round(avgScore)} out of 100.`);
+            setInterviewComplete(true);
             setInterviewStarted(false);
           }, 2000);
         }
@@ -121,7 +160,7 @@ const Index = () => {
         variant: "destructive",
       });
     }
-  }, [apiKey, currentQuestion]);
+  }, [apiKey, currentQuestion, questionSet, scores, userAnswers]);
 
   const startListening = () => {
     try {
@@ -165,9 +204,17 @@ const Index = () => {
   };
 
   const startInterview = () => {
+    // Select a random question set to avoid repetition
+    const questionSets = [IT_QUESTIONS, ADVANCED_IT_QUESTIONS, TECH_LEADERSHIP_QUESTIONS];
+    const selectedQuestionSet = questionSets[Math.floor(Math.random() * questionSets.length)];
+    
+    setQuestionSet(selectedQuestionSet);
     setCurrentQuestion(0);
+    setUserAnswers(new Array(selectedQuestionSet.length).fill(''));
+    setScores(new Array(selectedQuestionSet.length).fill(0));
+    setInterviewComplete(false);
     setInterviewStarted(true);
-    speakQuestion("Welcome to the Source Coders AI Interview. " + IT_QUESTIONS[0]);
+    speakQuestion("Welcome to the Source Coders AI Interview. " + selectedQuestionSet[0]);
   };
 
   const resetInterview = () => {
@@ -181,6 +228,9 @@ const Index = () => {
     setIsListening(false);
     setIsSpeaking(false);
     setInterviewStarted(false);
+    setInterviewComplete(false);
+    setUserAnswers([]);
+    setScores([]);
   };
 
   const handleApiKeySet = (key: string) => {
@@ -188,10 +238,10 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100 p-8">
       <div className="max-w-6xl mx-auto space-y-12">
         <header className="text-center">
-          <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+          <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
             Source Coders AI Interview
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
@@ -207,18 +257,56 @@ const Index = () => {
 
         {apiKey && (
           <div className="grid md:grid-cols-2 gap-8">
-            <Card className="glass-panel p-6 space-y-6">
+            <Card className="glass-panel p-6 space-y-6 transform transition-all duration-300 hover:shadow-xl">
               <AIAvatar isSpeaking={isSpeaking} />
               <VoiceVisualizer isListening={isListening} />
+              
               <div className="space-y-4">
                 <p className="text-lg font-medium text-center">
-                  {interviewStarted ? IT_QUESTIONS[currentQuestion] : "Ready to start your interview?"}
+                  {interviewStarted ? questionSet[currentQuestion] : 
+                   interviewComplete ? "Interview Complete!" : "Ready to start your interview?"}
                 </p>
+                
+                {interviewComplete && (
+                  <div className="mt-4 bg-gradient-to-r from-purple-100 to-indigo-100 p-5 rounded-lg shadow-inner">
+                    <h3 className="text-xl font-bold text-center text-purple-800 mb-4">Interview Results</h3>
+                    <div className="space-y-4">
+                      {userAnswers.map((answer, index) => (
+                        <div key={index} className="mb-3 p-3 bg-white/50 rounded-lg">
+                          <p className="font-medium text-indigo-800">Question {index + 1}: {questionSet[index]}</p>
+                          <p className="text-gray-700 mt-1">{answer}</p>
+                          <div className="mt-2 flex items-center">
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div 
+                                className="h-2.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" 
+                                style={{ width: `${scores[index]}%` }}
+                              ></div>
+                            </div>
+                            <span className="ml-2 text-sm font-medium text-indigo-800">{scores[index]}%</span>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="text-center pt-4 border-t border-purple-200">
+                        <p className="text-2xl font-bold text-purple-800">
+                          Overall Score: {totalScore}%
+                        </p>
+                        <p className="text-gray-600 mt-2">
+                          {totalScore >= 90 ? "Excellent! You're a perfect candidate." :
+                           totalScore >= 80 ? "Great job! You performed very well." :
+                           totalScore >= 70 ? "Good effort! You have potential." :
+                           "Keep practicing to improve your interview skills."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex justify-center gap-3">
                   {!interviewStarted ? (
                     <Button
                       onClick={startInterview}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg transform transition-all duration-300 hover:scale-105"
                     >
                       <Mic className="mr-2 h-4 w-4" />
                       Start Interview
@@ -227,7 +315,9 @@ const Index = () => {
                     <>
                       <Button
                         onClick={isListening ? stopListening : startListening}
-                        className={isListening ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"}
+                        className={isListening 
+                          ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600" 
+                          : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"}
                         disabled={isSpeaking}
                       >
                         {isListening ? (
@@ -245,6 +335,7 @@ const Index = () => {
                       <Button
                         onClick={resetInterview}
                         variant="outline"
+                        className="border-purple-300 hover:bg-purple-50"
                       >
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Reset
@@ -252,12 +343,19 @@ const Index = () => {
                     </>
                   )}
                 </div>
-                {interviewStarted && (
-                  <div className="mt-4 bg-blue-50 p-3 rounded-md">
-                    <p className="text-sm text-gray-600">
-                      Question {currentQuestion + 1} of {IT_QUESTIONS.length}
+                
+                {interviewStarted && !interviewComplete && (
+                  <div className="mt-4 bg-indigo-50 p-3 rounded-md border border-indigo-100 shadow-inner">
+                    <p className="text-sm text-indigo-800 font-medium">
+                      Question {currentQuestion + 1} of {questionSet.length}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                      <div 
+                        className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" 
+                        style={{ width: `${((currentQuestion + 1) / questionSet.length) * 100}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-indigo-600 mt-2">
                       {isListening ? "Listening to your answer..." : isSpeaking ? "AI is speaking..." : "Click 'Answer Question' to respond"}
                     </p>
                   </div>
@@ -266,7 +364,7 @@ const Index = () => {
             </Card>
 
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold text-center mb-6">Our Team</h2>
+              <h2 className="text-2xl font-semibold text-center mb-6 text-indigo-800">Our Team</h2>
               <div className="grid grid-cols-2 gap-4">
                 {TEAM_MEMBERS.map((member, index) => (
                   <TeamMember key={index} {...member} />
