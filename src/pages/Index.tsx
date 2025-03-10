@@ -1,11 +1,12 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import AIAvatar from '@/components/AIAvatar';
 import VoiceVisualizer from '@/components/VoiceVisualizer';
 import TeamMember from '@/components/TeamMember';
-import { Mic, MicOff } from 'lucide-react';
+import ApiKeyInput from '@/components/ApiKeyInput';
+import { Mic, MicOff, RefreshCw } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 
 const IT_QUESTIONS = [
@@ -43,72 +44,147 @@ const Index = () => {
   const [isListening, setIsListening] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [apiKey, setApiKey] = useState<string>('');
+  const [interviewStarted, setInterviewStarted] = useState(false);
   const { toast } = useToast();
-
-  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  const synthesis = window.speechSynthesis;
+  
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const synthesisRef = useRef<SpeechSynthesis | null>(null);
 
   useEffect(() => {
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    // Check if API key is stored in localStorage
+    const storedApiKey = localStorage.getItem('google_api_key');
+    if (storedApiKey) {
+      setApiKey(storedApiKey);
+    }
 
-    recognition.onresult = (event) => {
-      const answer = event.results[0][0].transcript;
-      toast({
-        title: "Your Answer",
-        description: answer,
-      });
-      stopListening();
-      
-      if (currentQuestion < IT_QUESTIONS.length - 1) {
-        setTimeout(() => {
-          setCurrentQuestion(prev => prev + 1);
-          speakQuestion(IT_QUESTIONS[currentQuestion + 1]);
-        }, 2000);
-      } else {
-        setTimeout(() => {
-          speakQuestion("Thank you for completing the interview!");
-        }, 2000);
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
-      stopListening();
-    };
+    // Initialize speech synthesis
+    if (window.speechSynthesis) {
+      synthesisRef.current = window.speechSynthesis;
+    }
 
     return () => {
-      recognition.abort();
-      synthesis.cancel();
+      // Clean up speech resources
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+      if (synthesisRef.current) {
+        synthesisRef.current.cancel();
+      }
     };
-  }, [currentQuestion]);
+  }, []);
+
+  useEffect(() => {
+    if (!apiKey) return;
+
+    // Initialize speech recognition
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+
+      recognitionRef.current.onresult = (event) => {
+        const answer = event.results[0][0].transcript;
+        toast({
+          title: "Your Answer",
+          description: answer,
+        });
+        stopListening();
+        
+        if (currentQuestion < IT_QUESTIONS.length - 1) {
+          setTimeout(() => {
+            setCurrentQuestion(prev => prev + 1);
+            speakQuestion(IT_QUESTIONS[currentQuestion + 1]);
+          }, 2000);
+        } else {
+          setTimeout(() => {
+            speakQuestion("Thank you for completing the interview!");
+            setInterviewStarted(false);
+          }, 2000);
+        }
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        stopListening();
+        toast({
+          title: "Error",
+          description: "There was an issue with speech recognition. Please try again.",
+          variant: "destructive",
+        });
+      };
+    } else {
+      toast({
+        title: "Browser Not Supported",
+        description: "Your browser doesn't support speech recognition. Please try using Chrome.",
+        variant: "destructive",
+      });
+    }
+  }, [apiKey, currentQuestion]);
 
   const startListening = () => {
     try {
-      recognition.start();
-      setIsListening(true);
+      if (recognitionRef.current) {
+        recognitionRef.current.start();
+        setIsListening(true);
+      }
     } catch (error) {
       console.error('Speech recognition error:', error);
+      toast({
+        title: "Error",
+        description: "Could not start speech recognition. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const stopListening = () => {
-    recognition.stop();
-    setIsListening(false);
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
   };
 
   const speakQuestion = (text: string) => {
+    if (!synthesisRef.current) return;
+    
+    // Cancel any ongoing speech
+    synthesisRef.current.cancel();
+    
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => {
       setIsSpeaking(false);
-      startListening();
+      // Only auto-start listening when in the middle of the interview
+      if (interviewStarted && text !== "Thank you for completing the interview!") {
+        startListening();
+      }
     };
-    synthesis.speak(utterance);
+    synthesisRef.current.speak(utterance);
   };
 
   const startInterview = () => {
+    setCurrentQuestion(0);
+    setInterviewStarted(true);
     speakQuestion("Welcome to the Source Coders AI Interview. " + IT_QUESTIONS[0]);
+  };
+
+  const resetInterview = () => {
+    if (synthesisRef.current) {
+      synthesisRef.current.cancel();
+    }
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+    }
+    setCurrentQuestion(0);
+    setIsListening(false);
+    setIsSpeaking(false);
+    setInterviewStarted(false);
+  };
+
+  const handleApiKeySet = (key: string) => {
+    setApiKey(key);
   };
 
   return (
@@ -123,44 +199,82 @@ const Index = () => {
           </p>
         </header>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          <Card className="glass-panel p-6 space-y-6">
-            <AIAvatar isSpeaking={isSpeaking} />
-            <VoiceVisualizer isListening={isListening} />
-            <div className="space-y-4">
-              <p className="text-lg font-medium text-center">
-                {IT_QUESTIONS[currentQuestion]}
-              </p>
-              <div className="flex justify-center">
-                <Button
-                  onClick={isListening ? stopListening : startInterview}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {isListening ? (
-                    <>
-                      <MicOff className="mr-2 h-4 w-4" />
-                      Stop Recording
-                    </>
+        {!apiKey && (
+          <div className="max-w-md mx-auto">
+            <ApiKeyInput onApiKeySet={handleApiKeySet} />
+          </div>
+        )}
+
+        {apiKey && (
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="glass-panel p-6 space-y-6">
+              <AIAvatar isSpeaking={isSpeaking} />
+              <VoiceVisualizer isListening={isListening} />
+              <div className="space-y-4">
+                <p className="text-lg font-medium text-center">
+                  {interviewStarted ? IT_QUESTIONS[currentQuestion] : "Ready to start your interview?"}
+                </p>
+                <div className="flex justify-center gap-3">
+                  {!interviewStarted ? (
+                    <Button
+                      onClick={startInterview}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Mic className="mr-2 h-4 w-4" />
+                      Start Interview
+                    </Button>
                   ) : (
                     <>
-                      <Mic className="mr-2 h-4 w-4" />
-                      {currentQuestion === 0 ? "Start Interview" : "Answer Question"}
+                      <Button
+                        onClick={isListening ? stopListening : startListening}
+                        className={isListening ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"}
+                        disabled={isSpeaking}
+                      >
+                        {isListening ? (
+                          <>
+                            <MicOff className="mr-2 h-4 w-4" />
+                            Stop Recording
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="mr-2 h-4 w-4" />
+                            Answer Question
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={resetInterview}
+                        variant="outline"
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Reset
+                      </Button>
                     </>
                   )}
-                </Button>
+                </div>
+                {interviewStarted && (
+                  <div className="mt-4 bg-blue-50 p-3 rounded-md">
+                    <p className="text-sm text-gray-600">
+                      Question {currentQuestion + 1} of {IT_QUESTIONS.length}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {isListening ? "Listening to your answer..." : isSpeaking ? "AI is speaking..." : "Click 'Answer Question' to respond"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold text-center mb-6">Our Team</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {TEAM_MEMBERS.map((member, index) => (
+                  <TeamMember key={index} {...member} />
+                ))}
               </div>
             </div>
-          </Card>
-
-          <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-center mb-6">Our Team</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {TEAM_MEMBERS.map((member, index) => (
-                <TeamMember key={index} {...member} />
-              ))}
-            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
