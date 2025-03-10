@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import ApiKeyInput from '@/components/ApiKeyInput';
 import { Mic, MicOff, RefreshCw } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 
+// Question sets for different topics
 const IT_QUESTIONS = [
   "Tell me about your experience with software development.",
   "How do you handle debugging complex issues?",
@@ -85,6 +87,7 @@ const Index = () => {
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const synthesisRef = useRef<SpeechSynthesis | null>(null);
+  const welcomeSpokenRef = useRef(false);
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('google_api_key');
@@ -126,6 +129,7 @@ const Index = () => {
         updatedAnswers[currentQuestion] = answer;
         setUserAnswers(updatedAnswers);
         
+        // Calculate score based on answer quality (simulated for now)
         const score = Math.floor(Math.random() * 31) + 70;
         const updatedScores = [...scores];
         updatedScores[currentQuestion] = score;
@@ -135,8 +139,9 @@ const Index = () => {
         
         if (currentQuestion < questionSet.length - 1) {
           setTimeout(() => {
-            setCurrentQuestion(prev => prev + 1);
-            speakQuestion(questionSet[currentQuestion + 1]);
+            const nextQuestionIndex = currentQuestion + 1;
+            setCurrentQuestion(nextQuestionIndex);
+            speakQuestion(questionSet[nextQuestionIndex]);
           }, 2000);
         } else {
           const avgScore = updatedScores.reduce((sum, score) => sum + score, 0) / updatedScores.length;
@@ -159,6 +164,11 @@ const Index = () => {
           variant: "destructive",
         });
       };
+      
+      // Important: Stop recognition when it ends to prevent it from taking the next question as an answer
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
     } else {
       toast({
         title: "Browser Not Supported",
@@ -171,8 +181,14 @@ const Index = () => {
   const startListening = () => {
     try {
       if (recognitionRef.current) {
-        recognitionRef.current.start();
-        setIsListening(true);
+        // Reset the recognition instance to clear any previous state
+        recognitionRef.current.abort();
+        setTimeout(() => {
+          if (recognitionRef.current) {
+            recognitionRef.current.start();
+            setIsListening(true);
+          }
+        }, 100);
       }
     } catch (error) {
       console.error('Speech recognition error:', error);
@@ -200,7 +216,8 @@ const Index = () => {
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => {
       setIsSpeaking(false);
-      if (interviewStarted && text !== "Thank you for completing the interview!") {
+      // Only auto-start listening if this is a question during an active interview
+      if (interviewStarted && !text.includes("Thank you for completing the interview")) {
         startListening();
       }
     };
@@ -208,24 +225,32 @@ const Index = () => {
   };
 
   const startInterview = () => {
+    // Reset all state for a fresh interview
     setCurrentQuestion(0);
     setUserAnswers([]);
     setScores([]);
     setInterviewComplete(false);
+    welcomeSpokenRef.current = false;
     
+    // Randomize and select questions from all categories
     const allQuestions = [
       ...IT_QUESTIONS,
       ...ADVANCED_IT_QUESTIONS,
       ...TECH_LEADERSHIP_QUESTIONS,
     ];
     
+    // Properly shuffle the questions to ensure randomness
     const shuffledQuestions = [...allQuestions]
       .sort(() => Math.random() - 0.5)
       .slice(0, 5);
     
     setQuestionSet(shuffledQuestions);
     setInterviewStarted(true);
-    speakQuestion("Welcome to the Source Coders AI Interview. " + shuffledQuestions[0]);
+    
+    // Wait a moment before speaking to ensure state is updated
+    setTimeout(() => {
+      speakQuestion("Welcome to the Source Coders AI Interview. " + shuffledQuestions[0]);
+    }, 300);
   };
 
   const resetInterview = () => {
@@ -243,10 +268,12 @@ const Index = () => {
     setUserAnswers([]);
     setScores([]);
     setQuestionSet([]);
+    welcomeSpokenRef.current = false;
   };
 
   const handleApiKeySet = (key: string) => {
     setApiKey(key);
+    localStorage.setItem('google_api_key', key);
   };
 
   return (
