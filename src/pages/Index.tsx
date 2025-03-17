@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import TeamMember from '@/components/TeamMember';
 import ApiKeyInput from '@/components/ApiKeyInput';
 import { Mic, MicOff, RefreshCw } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { Link } from 'react-router-dom';
 
 // Question sets for different topics
 const IT_QUESTIONS = [
@@ -389,6 +389,9 @@ const Index = () => {
           <p className="text-gray-600 max-w-2xl mx-auto">
             Experience our innovative AI-powered interview system. Speak your answers naturally, and our AI will guide you through the process.
           </p>
+          <Link to="/about" className="text-blue-600 hover:text-blue-800 font-medium">
+            About Us
+          </Link>
         </header>
 
         {!apiKey && (
