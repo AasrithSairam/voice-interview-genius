@@ -1,13 +1,13 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import AIAvatar from '@/components/AIAvatar';
 import VoiceVisualizer from '@/components/VoiceVisualizer';
-import TeamMember from '@/components/TeamMember';
-import ApiKeyInput from '@/components/ApiKeyInput';
-import { Mic, MicOff, RefreshCw } from 'lucide-react';
+import { Mic, MicOff, RefreshCw, Info } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from 'react-router-dom';
+import ApiKeyInput from '@/components/ApiKeyInput';
 
 // Question sets for different topics
 const IT_QUESTIONS = [
@@ -386,11 +386,11 @@ const Index = () => {
           <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
             Source Coders AI Interview
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="text-gray-600 max-w-2xl mx-auto mb-2">
             Experience our innovative AI-powered interview system. Speak your answers naturally, and our AI will guide you through the process.
           </p>
-          <Link to="/about" className="text-blue-600 hover:text-blue-800 font-medium">
-            About Us
+          <Link to="/about" className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+            <Info className="h-4 w-4 mr-1" /> About Our Team
           </Link>
         </header>
 
@@ -401,8 +401,8 @@ const Index = () => {
         )}
 
         {apiKey && (
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="glass-panel p-6 space-y-6 transform transition-all duration-300 hover:shadow-xl">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+            <Card className="glass-panel p-6 space-y-6 transform transition-all duration-300 hover:shadow-xl md:col-span-7">
               <AIAvatar isSpeaking={isSpeaking} />
               <VoiceVisualizer isListening={isListening} />
               
@@ -523,12 +523,44 @@ const Index = () => {
               </div>
             </Card>
 
-            <div className="space-y-6">
-              <h2 className="text-2xl font-semibold text-center mb-6 text-indigo-800">Our Team</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {TEAM_MEMBERS.map((member, index) => (
-                  <TeamMember key={index} {...member} />
-                ))}
+            {/* Design elements to replace the team section */}
+            <div className="space-y-6 md:col-span-5">
+              <div className="glass-panel p-6 rounded-xl border border-white/20 h-full flex flex-col justify-between">
+                <div className="space-y-8">
+                  <div className="relative">
+                    <div className="absolute -top-6 -left-6 w-24 h-24 bg-purple-400 rounded-full opacity-20 blur-xl"></div>
+                    <div className="absolute -bottom-10 -right-10 w-36 h-36 bg-indigo-400 rounded-full opacity-20 blur-xl"></div>
+                    <h2 className="text-2xl font-semibold text-center text-indigo-800 relative z-10">Interview Tips</h2>
+                  </div>
+                  
+                  <div className="space-y-6 relative z-10">
+                    <div className="team-card p-4">
+                      <h3 className="text-lg font-medium mb-2 text-purple-800">Speak Clearly</h3>
+                      <p className="text-sm text-gray-600">Articulate your thoughts at a moderate pace. This helps our AI understand your responses better.</p>
+                    </div>
+
+                    <div className="team-card p-4 pulse">
+                      <h3 className="text-lg font-medium mb-2 text-purple-800">Be Concise</h3>
+                      <p className="text-sm text-gray-600">While detailed answers are good, try to stay focused on addressing the specific question asked.</p>
+                    </div>
+
+                    <div className="team-card p-4">
+                      <h3 className="text-lg font-medium mb-2 text-purple-800">Use Examples</h3>
+                      <p className="text-sm text-gray-600">Support your answers with relevant examples from your experience to make your responses more compelling.</p>
+                    </div>
+                    
+                    <div className="team-card p-4 floating">
+                      <h3 className="text-lg font-medium mb-2 text-purple-800">Structure Your Answers</h3>
+                      <p className="text-sm text-gray-600">For complex questions, use a framework like STAR (Situation, Task, Action, Result) to organize your thoughts.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 p-4 rounded-lg">
+                  <p className="text-sm text-center text-indigo-900 font-medium">
+                    Our AI evaluates your responses based on relevance, clarity, detail, and technical accuracy
+                  </p>
+                </div>
               </div>
             </div>
           </div>
