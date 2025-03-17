@@ -72,6 +72,109 @@ const TEAM_MEMBERS = [
   }
 ];
 
+/**
+ * Evaluates the quality of an answer based on multiple factors
+ * @param answer The candidate's answer to evaluate
+ * @param question The original question that was asked
+ * @returns A score between 0-100
+ */
+const evaluateAnswer = (answer: string, question: string): number => {
+  // Base score starts at 50
+  let score = 50;
+  
+  // 1. Length evaluation - answers should be comprehensive but not too short
+  const wordCount = answer.split(/\s+/).filter(word => word.length > 0).length;
+  if (wordCount < 5) {
+    // Very short answers are penalized heavily
+    score -= 30;
+  } else if (wordCount < 15) {
+    // Short answers get a smaller penalty
+    score -= 15;
+  } else if (wordCount >= 30 && wordCount < 100) {
+    // Good length answers get a bonus
+    score += 10;
+  } else if (wordCount >= 100) {
+    // Very long answers get a small bonus, but less than concise ones
+    score += 5;
+  }
+  
+  // 2. Grammar and language evaluation (basic)
+  const grammarIssues = [
+    // Common grammar issues to check
+    { pattern: /\b(i|Im)\b(?![a-z'])/gi, penalty: 2 }, // Not capitalizing "I"
+    { pattern: /\b(dont|cant|wont|didnt|couldnt|wouldnt|shouldnt)\b/gi, penalty: 2 }, // Missing apostrophes
+    { pattern: /\s[,.?!]/g, penalty: 1 }, // Space before punctuation
+    { pattern: /\b(there|their|they're|your|you're|its|it's|to|too|two)\b/gi, penalty: 0 }, // Common confusions (no penalty, just flagged)
+    { pattern: /\b(is|was|were|am|are)\b\s\1\b/gi, penalty: 3 }, // Repeated words
+    { pattern: /[,.!?][A-Za-z]/g, penalty: 2 }, // No space after punctuation
+  ];
+  
+  let grammarScore = 15; // Max grammar score
+  
+  grammarIssues.forEach(issue => {
+    const matches = (answer.match(issue.pattern) || []).length;
+    grammarScore -= matches * issue.penalty;
+  });
+  
+  // Ensure grammar score doesn't go negative
+  grammarScore = Math.max(0, grammarScore);
+  score += grammarScore;
+  
+  // 3. Relevance to question (basic implementation)
+  // Extract keywords from the question (simplified approach)
+  const questionWords = question.toLowerCase()
+    .replace(/[.,?!;:(){}[\]]/g, '')
+    .split(/\s+/)
+    .filter(word => word.length > 3 && !['what', 'when', 'where', 'which', 'that', 'with', 'your'].includes(word));
+  
+  // Check if answer contains keywords from question
+  let keywordMatches = 0;
+  questionWords.forEach(keyword => {
+    if (answer.toLowerCase().includes(keyword)) {
+      keywordMatches++;
+    }
+  });
+  
+  // Calculate relevance score
+  const relevanceScore = Math.min(20, Math.round((keywordMatches / Math.max(1, questionWords.length)) * 20));
+  score += relevanceScore;
+  
+  // 4. Structure and completeness (basic heuristics)
+  // Check if answer has some structure (multiple sentences)
+  const sentenceCount = answer.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+  if (sentenceCount >= 3) {
+    score += 5;
+  }
+  
+  // Bonus for beginning with a clear statement or acknowledgment
+  if (/^(Yes|No|I|In my|My|The|When|As a|From|If|I've|I'd|I'll|I'm|This|That)/i.test(answer.trim())) {
+    score += 5;
+  }
+  
+  // 5. Technical words/jargon appropriate to IT interviews (if relevant)
+  const techTerms = [
+    'code', 'develop', 'software', 'program', 'application', 'app', 'system', 'data', 'cloud',
+    'algorithm', 'function', 'method', 'class', 'object', 'interface', 'api', 'database', 'sql',
+    'react', 'angular', 'vue', 'javascript', 'typescript', 'java', 'python', 'c#', 'html', 'css',
+    'server', 'client', 'frontend', 'backend', 'full-stack', 'agile', 'scrum', 'kanban', 'git',
+    'devops', 'ci/cd', 'test', 'debug', 'deploy', 'architecture', 'design', 'pattern', 'security'
+  ];
+  
+  let techTermCount = 0;
+  techTerms.forEach(term => {
+    const regex = new RegExp('\\b' + term + '\\b', 'i');
+    if (regex.test(answer)) {
+      techTermCount++;
+    }
+  });
+  
+  // Add bonus for appropriate technical language (up to 5 points)
+  score += Math.min(5, techTermCount);
+  
+  // Ensure final score is within 0-100 range
+  return Math.max(0, Math.min(100, Math.round(score)));
+};
+
 const Index = () => {
   const [isListening, setIsListening] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -129,8 +232,8 @@ const Index = () => {
         updatedAnswers[currentQuestion] = answer;
         setUserAnswers(updatedAnswers);
         
-        // Calculate score based on answer quality (simulated for now)
-        const score = Math.floor(Math.random() * 31) + 70;
+        // Use the improved scoring algorithm instead of random scores
+        const score = evaluateAnswer(answer, questionSet[currentQuestion]);
         const updatedScores = [...scores];
         updatedScores[currentQuestion] = score;
         setScores(updatedScores);
@@ -317,23 +420,38 @@ const Index = () => {
                           <div className="mt-2 flex items-center">
                             <div className="w-full bg-gray-200 rounded-full h-2.5">
                               <div 
-                                className="h-2.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" 
+                                className={`h-2.5 rounded-full ${
+                                  scores[index] >= 90 ? 'bg-green-500' : 
+                                  scores[index] >= 70 ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 
+                                  scores[index] >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
                                 style={{ width: `${scores[index]}%` }}
                               ></div>
                             </div>
-                            <span className="ml-2 text-sm font-medium text-indigo-800">{scores[index]}%</span>
+                            <span className={`ml-2 text-sm font-medium ${
+                              scores[index] >= 90 ? 'text-green-700' : 
+                              scores[index] >= 70 ? 'text-indigo-800' : 
+                              scores[index] >= 50 ? 'text-yellow-700' : 'text-red-700'
+                            }`}>
+                              {scores[index]}%
+                            </span>
                           </div>
                         </div>
                       ))}
                       
                       <div className="text-center pt-4 border-t border-purple-200">
-                        <p className="text-2xl font-bold text-purple-800">
+                        <p className={`text-2xl font-bold ${
+                          totalScore >= 90 ? 'text-green-700' : 
+                          totalScore >= 70 ? 'text-purple-800' : 
+                          totalScore >= 50 ? 'text-yellow-700' : 'text-red-700'
+                        }`}>
                           Overall Score: {totalScore}%
                         </p>
                         <p className="text-gray-600 mt-2">
                           {totalScore >= 90 ? "Excellent! You're a perfect candidate." :
                            totalScore >= 80 ? "Great job! You performed very well." :
                            totalScore >= 70 ? "Good effort! You have potential." :
+                           totalScore >= 50 ? "There's room for improvement in your responses." :
                            "Keep practicing to improve your interview skills."}
                         </p>
                       </div>
