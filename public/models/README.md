@@ -1,3 +1,7 @@
 
-This folder contains the face detection models used by face-api.js.
-The models will be downloaded automatically from the CDN when the application loads.
+# Face Detection Models
+
+This folder was originally intended to contain face-api.js models, but we now load them from the CDN directly:
+https://justadudewhohacks.github.io/face-api.js/models
+
+This ensures the models are loaded correctly and prevents 404 errors.

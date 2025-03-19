@@ -1,33 +1,50 @@
 
 import { useState, useRef, useEffect } from 'react';
 import * as faceapi from 'face-api.js';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const FaceDetectionVideo = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [detectionEnabled, setDetectionEnabled] = useState(true);
+  const [modelLoading, setModelLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noFaceDetected, setNoFaceDetected] = useState(false);
+  const faceDetectionInterval = useRef<number | null>(null);
 
   useEffect(() => {
-    // Load face-api models
+    // Load models from CDN instead of local files
     const loadModels = async () => {
       try {
+        setModelLoading(true);
+        
+        // Use CDN URLs for the models
+        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+        
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         ]);
+        
+        setModelLoading(false);
         startVideo();
       } catch (err) {
         console.error('Error loading face detection models:', err);
-        setError('Could not load face detection models. Please make sure you have internet connection.');
+        setModelLoading(false);
+        setError('Failed to load face detection models. Please reload the page and try again.');
       }
     };
 
     loadModels();
     
-    // Cleanup function to stop video stream when component unmounts
+    // Cleanup function
     return () => {
+      if (faceDetectionInterval.current) {
+        clearTimeout(faceDetectionInterval.current);
+      }
+      
       if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         const tracks = stream.getTracks();
@@ -38,7 +55,6 @@ const FaceDetectionVideo = () => {
 
   const startVideo = async () => {
     try {
-      // Request camera access
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           width: { ideal: 640 },
@@ -61,11 +77,9 @@ const FaceDetectionVideo = () => {
     
     if (!canvasRef.current || !videoRef.current) return;
     
-    // Set canvas dimensions to match video
     canvasRef.current.width = videoRef.current.videoWidth;
     canvasRef.current.height = videoRef.current.videoHeight;
     
-    // Start face detection
     detectFaces();
   };
 
@@ -78,25 +92,28 @@ const FaceDetectionVideo = () => {
     });
     
     try {
-      // Detect faces in video stream
       const detections = await faceapi.detectAllFaces(
         videoRef.current, 
-        new faceapi.TinyFaceDetectorOptions()
+        options
       ).withFaceLandmarks();
       
-      // Clear previous drawings
       const ctx = canvasRef.current.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       }
       
-      // Draw face detection results
-      faceapi.draw.drawDetections(canvasRef.current, detections);
-      faceapi.draw.drawFaceLandmarks(canvasRef.current, detections);
+      // Check if a face is detected
+      if (detections.length === 0) {
+        setNoFaceDetected(true);
+      } else {
+        setNoFaceDetected(false);
+        faceapi.draw.drawDetections(canvasRef.current, detections);
+        faceapi.draw.drawFaceLandmarks(canvasRef.current, detections);
+      }
       
-      // Continue detecting faces at regular intervals
+      // Continue detecting faces
       if (detectionEnabled) {
-        setTimeout(() => detectFaces(), 100);
+        faceDetectionInterval.current = window.setTimeout(() => detectFaces(), 100);
       }
     } catch (err) {
       console.error('Face detection error:', err);
@@ -109,16 +126,27 @@ const FaceDetectionVideo = () => {
       detectFaces();
     } else {
       setDetectionEnabled(false);
+      if (faceDetectionInterval.current) {
+        clearTimeout(faceDetectionInterval.current);
+      }
     }
   };
 
   return (
     <div className="face-detection-container relative mx-auto max-w-2xl">
+      {noFaceDetected && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            No face detected! Please make sure your face is visible in the camera.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="relative bg-gradient-to-r from-indigo-100/80 to-purple-100/80 p-1 rounded-2xl shadow-lg overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-md"></div>
         
         <div className="relative rounded-xl overflow-hidden">
-          {/* Video element for camera feed */}
           <video 
             ref={videoRef}
             autoPlay 
@@ -128,18 +156,16 @@ const FaceDetectionVideo = () => {
             className="w-full h-full object-cover rounded-xl"
           />
           
-          {/* Canvas overlay for face detection visualization */}
           <canvas 
             ref={canvasRef} 
             className="absolute top-0 left-0 w-full h-full"
           />
           
-          {/* Loading state or error message */}
-          {!isVideoLoaded && !error && (
+          {(modelLoading || !isVideoLoaded) && !error && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
               <div className="text-center">
                 <div className="animate-spin mb-2 mx-auto w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
-                <p>Loading camera...</p>
+                <p>{modelLoading ? 'Loading face detection models...' : 'Initializing camera...'}</p>
               </div>
             </div>
           )}
@@ -158,7 +184,6 @@ const FaceDetectionVideo = () => {
             </div>
           )}
           
-          {/* Detection toggle button */}
           <button
             onClick={toggleDetection}
             className="absolute bottom-4 right-4 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition-colors"

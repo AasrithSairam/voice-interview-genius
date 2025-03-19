@@ -3,8 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import TeamMember from "@/components/TeamMember";
-import { ArrowLeft, Video } from "lucide-react";
-import FaceDetectionVideo from "@/components/FaceDetectionVideo";
+import { ArrowLeft } from "lucide-react";
 
 const About = () => {
   return (
@@ -50,31 +49,6 @@ const About = () => {
             <p className="text-gray-600">
               Our mission is to make technical interview preparation accessible, effective, and engaging for everyone.
             </p>
-          </div>
-        </div>
-
-        {/* Face Detection Section */}
-        <div className="glass-panel p-8 rounded-xl border border-white/20 shadow-lg">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-semibold text-indigo-800">Live Interview Monitoring</h2>
-            <div className="flex items-center gap-2 bg-indigo-100 px-3 py-1 rounded-full text-indigo-700 text-sm">
-              <Video className="h-4 w-4" />
-              <span>Live Feed</span>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Our system uses advanced face detection to track engagement during interviews. 
-              This helps ensure candidates maintain proper posture and attention throughout the process.
-            </p>
-            
-            <FaceDetectionVideo />
-            
-            <div className="bg-indigo-50 p-4 rounded-lg text-sm text-indigo-800 mt-4">
-              <p className="font-medium">Privacy Note:</p>
-              <p>All video processing happens locally in your browser. No video data is sent to our servers or stored anywhere.</p>
-            </div>
           </div>
         </div>
 
