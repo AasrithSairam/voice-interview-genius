@@ -58,12 +58,12 @@ const About = () => {
             <TeamMember 
               name="Lalit Chandran" 
               role="AI Integration Specialist" 
-              image="/lovable-uploads/8993e372-9372-4702-a0aa-7a99603246b0.png" 
+              image="/lovable-uploads/40a683f9-8db3-496c-b2cd-9fdb51b5b43a.png" 
             />
             <TeamMember 
               name="Ponguru Aasrith Sairam" 
               role="Team Lead & Frontend Developer" 
-              image="/lovable-uploads/40a683f9-8db3-496c-b2cd-9fdb51b5b43a.png" 
+              image="/lovable-uploads/8993e372-9372-4702-a0aa-7a99603246b0.png" 
             />
             <TeamMember 
               name="Ravi Varman" 
