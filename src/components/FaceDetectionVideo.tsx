@@ -13,6 +13,10 @@ const FaceDetectionVideo = () => {
   const [error, setError] = useState<string | null>(null);
   const [noFaceDetected, setNoFaceDetected] = useState(false);
   const faceDetectionInterval = useRef<number | null>(null);
+  
+  // Face detection counter to reduce flickering of warnings
+  const noFaceCounter = useRef(0);
+  const NO_FACE_THRESHOLD = 10; // Show warning after this many consecutive frames without a face
 
   useEffect(() => {
     // Load models from CDN instead of local files
@@ -104,8 +108,12 @@ const FaceDetectionVideo = () => {
       
       // Check if a face is detected
       if (detections.length === 0) {
-        setNoFaceDetected(true);
+        noFaceCounter.current += 1;
+        if (noFaceCounter.current >= NO_FACE_THRESHOLD) {
+          setNoFaceDetected(true);
+        }
       } else {
+        noFaceCounter.current = 0;
         setNoFaceDetected(false);
         faceapi.draw.drawDetections(canvasRef.current, detections);
         faceapi.draw.drawFaceLandmarks(canvasRef.current, detections);
@@ -135,7 +143,7 @@ const FaceDetectionVideo = () => {
   return (
     <div className="face-detection-container relative mx-auto max-w-2xl">
       {noFaceDetected && (
-        <Alert variant="destructive" className="mb-4">
+        <Alert variant="destructive" className="mb-4 animate-pulse">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             No face detected! Please make sure your face is visible in the camera.

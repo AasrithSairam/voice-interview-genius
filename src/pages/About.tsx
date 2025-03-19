@@ -56,24 +56,24 @@ const About = () => {
           <h2 className="text-2xl font-semibold text-center text-indigo-800">Meet Our Team</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <TeamMember 
-              name="Ponguru Aasrith Sairam" 
-              role="Team Lead & Frontend Developer" 
-              image="/lovable-uploads/3c6a3aec-fecd-4eda-9a00-3f3ae12fe39c.png" 
-            />
-            <TeamMember 
               name="Lalit Chandran" 
               role="AI Integration Specialist" 
-              image="/lovable-uploads/8d3df452-40b2-4157-94ef-b4f436add30d.png" 
+              image="/lovable-uploads/8993e372-9372-4702-a0aa-7a99603246b0.png" 
+            />
+            <TeamMember 
+              name="Ponguru Aasrith Sairam" 
+              role="Team Lead & Frontend Developer" 
+              image="/lovable-uploads/40a683f9-8db3-496c-b2cd-9fdb51b5b43a.png" 
             />
             <TeamMember 
               name="Ravi Varman" 
               role="Data Analyst" 
-              image="/lovable-uploads/a6ce2894-a1e0-48e8-8ac3-7b4558b97dda.png" 
+              image="/lovable-uploads/04f876aa-b802-4ead-8d77-13c1d53f4bd8.png" 
             />
             <TeamMember 
               name="Muhammed Afshan" 
               role="Backend Developer" 
-              image="/lovable-uploads/f2af00c7-7007-43d2-b141-01b2bf7b2e2d.png" 
+              image="/lovable-uploads/e092269b-eb3c-4390-bc07-34862b8d0bc5.png" 
             />
           </div>
         </div>

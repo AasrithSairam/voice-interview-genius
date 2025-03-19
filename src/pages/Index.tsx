@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,8 +7,8 @@ import { Mic, MicOff, RefreshCw, Info } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from 'react-router-dom';
 import ApiKeyInput from '@/components/ApiKeyInput';
+import FaceDetectionVideo from '@/components/FaceDetectionVideo';
 
-// Question sets for different topics
 const IT_QUESTIONS = [
   "Tell me about your experience with software development.",
   "How do you handle debugging complex issues?",
@@ -79,55 +78,43 @@ const TEAM_MEMBERS = [
  * @returns A score between 0-100
  */
 const evaluateAnswer = (answer: string, question: string): number => {
-  // Base score starts at 50
   let score = 50;
   
-  // 1. Length evaluation - answers should be comprehensive but not too short
   const wordCount = answer.split(/\s+/).filter(word => word.length > 0).length;
   if (wordCount < 5) {
-    // Very short answers are penalized heavily
     score -= 30;
   } else if (wordCount < 15) {
-    // Short answers get a smaller penalty
     score -= 15;
   } else if (wordCount >= 30 && wordCount < 100) {
-    // Good length answers get a bonus
     score += 10;
   } else if (wordCount >= 100) {
-    // Very long answers get a small bonus, but less than concise ones
     score += 5;
   }
   
-  // 2. Grammar and language evaluation (basic)
   const grammarIssues = [
-    // Common grammar issues to check
-    { pattern: /\b(i|Im)\b(?![a-z'])/gi, penalty: 2 }, // Not capitalizing "I"
-    { pattern: /\b(dont|cant|wont|didnt|couldnt|wouldnt|shouldnt)\b/gi, penalty: 2 }, // Missing apostrophes
-    { pattern: /\s[,.?!]/g, penalty: 1 }, // Space before punctuation
-    { pattern: /\b(there|their|they're|your|you're|its|it's|to|too|two)\b/gi, penalty: 0 }, // Common confusions (no penalty, just flagged)
-    { pattern: /\b(is|was|were|am|are)\b\s\1\b/gi, penalty: 3 }, // Repeated words
-    { pattern: /[,.!?][A-Za-z]/g, penalty: 2 }, // No space after punctuation
+    { pattern: /\b(i|Im)\b(?![a-z'])/gi, penalty: 2 },
+    { pattern: /\b(dont|cant|wont|didnt|couldnt|wouldnt|shouldnt)\b/gi, penalty: 2 },
+    { pattern: /\s[,.?!]/g, penalty: 1 },
+    { pattern: /\b(there|their|they're|your|you're|its|it's|to|too|two)\b/gi, penalty: 0 },
+    { pattern: /\b(is|was|were|am|are)\b\s\1\b/gi, penalty: 3 },
+    { pattern: /[,.!?][A-Za-z]/g, penalty: 2 },
   ];
   
-  let grammarScore = 15; // Max grammar score
+  let grammarScore = 15;
   
   grammarIssues.forEach(issue => {
     const matches = (answer.match(issue.pattern) || []).length;
     grammarScore -= matches * issue.penalty;
   });
   
-  // Ensure grammar score doesn't go negative
   grammarScore = Math.max(0, grammarScore);
   score += grammarScore;
   
-  // 3. Relevance to question (basic implementation)
-  // Extract keywords from the question (simplified approach)
   const questionWords = question.toLowerCase()
     .replace(/[.,?!;:(){}[\]]/g, '')
     .split(/\s+/)
     .filter(word => word.length > 3 && !['what', 'when', 'where', 'which', 'that', 'with', 'your'].includes(word));
   
-  // Check if answer contains keywords from question
   let keywordMatches = 0;
   questionWords.forEach(keyword => {
     if (answer.toLowerCase().includes(keyword)) {
@@ -135,23 +122,18 @@ const evaluateAnswer = (answer: string, question: string): number => {
     }
   });
   
-  // Calculate relevance score
   const relevanceScore = Math.min(20, Math.round((keywordMatches / Math.max(1, questionWords.length)) * 20));
   score += relevanceScore;
   
-  // 4. Structure and completeness (basic heuristics)
-  // Check if answer has some structure (multiple sentences)
   const sentenceCount = answer.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
   if (sentenceCount >= 3) {
     score += 5;
   }
   
-  // Bonus for beginning with a clear statement or acknowledgment
   if (/^(Yes|No|I|In my|My|The|When|As a|From|If|I've|I'd|I'll|I'm|This|That)/i.test(answer.trim())) {
     score += 5;
   }
   
-  // 5. Technical words/jargon appropriate to IT interviews (if relevant)
   const techTerms = [
     'code', 'develop', 'software', 'program', 'application', 'app', 'system', 'data', 'cloud',
     'algorithm', 'function', 'method', 'class', 'object', 'interface', 'api', 'database', 'sql',
@@ -168,10 +150,8 @@ const evaluateAnswer = (answer: string, question: string): number => {
     }
   });
   
-  // Add bonus for appropriate technical language (up to 5 points)
   score += Math.min(5, techTermCount);
   
-  // Ensure final score is within 0-100 range
   return Math.max(0, Math.min(100, Math.round(score)));
 };
 
@@ -232,7 +212,6 @@ const Index = () => {
         updatedAnswers[currentQuestion] = answer;
         setUserAnswers(updatedAnswers);
         
-        // Use the improved scoring algorithm instead of random scores
         const score = evaluateAnswer(answer, questionSet[currentQuestion]);
         const updatedScores = [...scores];
         updatedScores[currentQuestion] = score;
@@ -268,7 +247,6 @@ const Index = () => {
         });
       };
       
-      // Important: Stop recognition when it ends to prevent it from taking the next question as an answer
       recognitionRef.current.onend = () => {
         setIsListening(false);
       };
@@ -284,7 +262,6 @@ const Index = () => {
   const startListening = () => {
     try {
       if (recognitionRef.current) {
-        // Reset the recognition instance to clear any previous state
         recognitionRef.current.abort();
         setTimeout(() => {
           if (recognitionRef.current) {
@@ -319,7 +296,6 @@ const Index = () => {
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => {
       setIsSpeaking(false);
-      // Only auto-start listening if this is a question during an active interview
       if (interviewStarted && !text.includes("Thank you for completing the interview")) {
         startListening();
       }
@@ -328,21 +304,18 @@ const Index = () => {
   };
 
   const startInterview = () => {
-    // Reset all state for a fresh interview
     setCurrentQuestion(0);
     setUserAnswers([]);
     setScores([]);
     setInterviewComplete(false);
     welcomeSpokenRef.current = false;
     
-    // Randomize and select questions from all categories
     const allQuestions = [
       ...IT_QUESTIONS,
       ...ADVANCED_IT_QUESTIONS,
       ...TECH_LEADERSHIP_QUESTIONS,
     ];
     
-    // Properly shuffle the questions to ensure randomness
     const shuffledQuestions = [...allQuestions]
       .sort(() => Math.random() - 0.5)
       .slice(0, 5);
@@ -350,7 +323,6 @@ const Index = () => {
     setQuestionSet(shuffledQuestions);
     setInterviewStarted(true);
     
-    // Wait a moment before speaking to ensure state is updated
     setTimeout(() => {
       speakQuestion("Welcome to the Source Coders AI Interview. " + shuffledQuestions[0]);
     }, 300);
@@ -401,169 +373,175 @@ const Index = () => {
         )}
 
         {apiKey && (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-            <Card className="glass-panel p-6 space-y-6 transform transition-all duration-300 hover:shadow-xl md:col-span-7">
-              <AIAvatar isSpeaking={isSpeaking} />
-              <VoiceVisualizer isListening={isListening} />
-              
-              <div className="space-y-4">
-                <p className="text-lg font-medium text-center">
-                  {interviewStarted ? questionSet[currentQuestion] : 
-                   interviewComplete ? "Interview Complete!" : "Ready to start your interview?"}
-                </p>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+              <Card className="glass-panel p-6 space-y-6 transform transition-all duration-300 hover:shadow-xl md:col-span-7">
+                <AIAvatar isSpeaking={isSpeaking} />
+                <VoiceVisualizer isListening={isListening} />
                 
-                {interviewComplete && (
-                  <div className="mt-4 bg-gradient-to-r from-purple-100 to-indigo-100 p-5 rounded-lg shadow-inner">
-                    <h3 className="text-xl font-bold text-center text-purple-800 mb-4">Interview Results</h3>
-                    <div className="space-y-4">
-                      {userAnswers.map((answer, index) => (
-                        <div key={index} className="mb-3 p-3 bg-white/50 rounded-lg">
-                          <p className="font-medium text-indigo-800">Question {index + 1}: {questionSet[index]}</p>
-                          <p className="text-gray-700 mt-1">{answer}</p>
-                          <div className="mt-2 flex items-center">
-                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                              <div 
-                                className={`h-2.5 rounded-full ${
-                                  scores[index] >= 90 ? 'bg-green-500' : 
-                                  scores[index] >= 70 ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 
-                                  scores[index] >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                                }`}
-                                style={{ width: `${scores[index]}%` }}
-                              ></div>
+                <div className="space-y-4">
+                  <p className="text-lg font-medium text-center">
+                    {interviewStarted ? questionSet[currentQuestion] : 
+                     interviewComplete ? "Interview Complete!" : "Ready to start your interview?"}
+                  </p>
+                  
+                  {interviewComplete && (
+                    <div className="mt-4 bg-gradient-to-r from-purple-100 to-indigo-100 p-5 rounded-lg shadow-inner">
+                      <h3 className="text-xl font-bold text-center text-purple-800 mb-4">Interview Results</h3>
+                      <div className="space-y-4">
+                        {userAnswers.map((answer, index) => (
+                          <div key={index} className="mb-3 p-3 bg-white/50 rounded-lg">
+                            <p className="font-medium text-indigo-800">Question {index + 1}: {questionSet[index]}</p>
+                            <p className="text-gray-700 mt-1">{answer}</p>
+                            <div className="mt-2 flex items-center">
+                              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div 
+                                  className={`h-2.5 rounded-full ${
+                                    scores[index] >= 90 ? 'bg-green-500' : 
+                                    scores[index] >= 70 ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 
+                                    scores[index] >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${scores[index]}%` }}
+                                ></div>
+                              </div>
+                              <span className={`ml-2 text-sm font-medium ${
+                                scores[index] >= 90 ? 'text-green-700' : 
+                                scores[index] >= 70 ? 'text-indigo-800' : 
+                                scores[index] >= 50 ? 'text-yellow-700' : 'text-red-700'
+                              }`}>
+                                {scores[index]}%
+                              </span>
                             </div>
-                            <span className={`ml-2 text-sm font-medium ${
-                              scores[index] >= 90 ? 'text-green-700' : 
-                              scores[index] >= 70 ? 'text-indigo-800' : 
-                              scores[index] >= 50 ? 'text-yellow-700' : 'text-red-700'
-                            }`}>
-                              {scores[index]}%
-                            </span>
                           </div>
+                        ))}
+                        
+                        <div className="text-center pt-4 border-t border-purple-200">
+                          <p className={`text-2xl font-bold ${
+                            totalScore >= 90 ? 'text-green-700' : 
+                            totalScore >= 70 ? 'text-purple-800' : 
+                            totalScore >= 50 ? 'text-yellow-700' : 'text-red-700'
+                          }`}>
+                            Overall Score: {totalScore}%
+                          </p>
+                          <p className="text-gray-600 mt-2">
+                            {totalScore >= 90 ? "Excellent! You're a perfect candidate." :
+                             totalScore >= 80 ? "Great job! You performed very well." :
+                             totalScore >= 70 ? "Good effort! You have potential." :
+                             totalScore >= 50 ? "There's room for improvement in your responses." :
+                             "Keep practicing to improve your interview skills."}
+                          </p>
                         </div>
-                      ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-center gap-3">
+                    {!interviewStarted ? (
+                      <Button
+                        onClick={startInterview}
+                        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg transform transition-all duration-300 hover:scale-105"
+                      >
+                        <Mic className="mr-2 h-4 w-4" />
+                        Start Interview
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={isListening ? stopListening : startListening}
+                          className={isListening 
+                            ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600" 
+                            : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"}
+                          disabled={isSpeaking}
+                        >
+                          {isListening ? (
+                            <>
+                              <MicOff className="mr-2 h-4 w-4" />
+                              Stop Recording
+                            </>
+                          ) : (
+                            <>
+                              <Mic className="mr-2 h-4 w-4" />
+                              Answer Question
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={resetInterview}
+                          variant="outline"
+                          className="border-purple-300 hover:bg-purple-50"
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Reset
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  
+                  {interviewStarted && !interviewComplete && (
+                    <div className="mt-4 bg-indigo-50 p-3 rounded-md border border-indigo-100 shadow-inner">
+                      <p className="text-sm text-indigo-800 font-medium">
+                        Question {currentQuestion + 1} of {questionSet.length}
+                      </p>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                        <div 
+                          className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" 
+                          style={{ width: `${((currentQuestion + 1) / questionSet.length) * 100}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-indigo-600 mt-2">
+                        {isListening ? "Listening to your answer..." : isSpeaking ? "AI is speaking..." : "Click 'Answer Question' to respond"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              <div className="space-y-6 md:col-span-5">
+                <div className="glass-panel p-6 rounded-xl border border-white/20 h-full flex flex-col justify-between">
+                  <div className="space-y-8">
+                    <div className="relative">
+                      <div className="absolute -top-6 -left-6 w-24 h-24 bg-purple-400 rounded-full opacity-20 blur-xl"></div>
+                      <div className="absolute -bottom-10 -right-10 w-36 h-36 bg-indigo-400 rounded-full opacity-20 blur-xl"></div>
+                      <h2 className="text-2xl font-semibold text-center text-indigo-800 relative z-10">Interview Tips</h2>
+                    </div>
+                    
+                    <div className="space-y-6 relative z-10">
+                      <div className="team-card p-4">
+                        <h3 className="text-lg font-medium mb-2 text-purple-800">Speak Clearly</h3>
+                        <p className="text-sm text-gray-600">Articulate your thoughts at a moderate pace. This helps our AI understand your responses better.</p>
+                      </div>
+
+                      <div className="team-card p-4 pulse">
+                        <h3 className="text-lg font-medium mb-2 text-purple-800">Be Concise</h3>
+                        <p className="text-sm text-gray-600">While detailed answers are good, try to stay focused on addressing the specific question asked.</p>
+                      </div>
+
+                      <div className="team-card p-4">
+                        <h3 className="text-lg font-medium mb-2 text-purple-800">Use Examples</h3>
+                        <p className="text-sm text-gray-600">Support your answers with relevant examples from your experience to make your responses more compelling.</p>
+                      </div>
                       
-                      <div className="text-center pt-4 border-t border-purple-200">
-                        <p className={`text-2xl font-bold ${
-                          totalScore >= 90 ? 'text-green-700' : 
-                          totalScore >= 70 ? 'text-purple-800' : 
-                          totalScore >= 50 ? 'text-yellow-700' : 'text-red-700'
-                        }`}>
-                          Overall Score: {totalScore}%
-                        </p>
-                        <p className="text-gray-600 mt-2">
-                          {totalScore >= 90 ? "Excellent! You're a perfect candidate." :
-                           totalScore >= 80 ? "Great job! You performed very well." :
-                           totalScore >= 70 ? "Good effort! You have potential." :
-                           totalScore >= 50 ? "There's room for improvement in your responses." :
-                           "Keep practicing to improve your interview skills."}
-                        </p>
+                      <div className="team-card p-4 floating">
+                        <h3 className="text-lg font-medium mb-2 text-purple-800">Structure Your Answers</h3>
+                        <p className="text-sm text-gray-600">For complex questions, use a framework like STAR (Situation, Task, Action, Result) to organize your thoughts.</p>
                       </div>
                     </div>
                   </div>
-                )}
-                
-                <div className="flex justify-center gap-3">
-                  {!interviewStarted ? (
-                    <Button
-                      onClick={startInterview}
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg transform transition-all duration-300 hover:scale-105"
-                    >
-                      <Mic className="mr-2 h-4 w-4" />
-                      Start Interview
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        onClick={isListening ? stopListening : startListening}
-                        className={isListening 
-                          ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600" 
-                          : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"}
-                        disabled={isSpeaking}
-                      >
-                        {isListening ? (
-                          <>
-                            <MicOff className="mr-2 h-4 w-4" />
-                            Stop Recording
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="mr-2 h-4 w-4" />
-                            Answer Question
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        onClick={resetInterview}
-                        variant="outline"
-                        className="border-purple-300 hover:bg-purple-50"
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Reset
-                      </Button>
-                    </>
-                  )}
-                </div>
-                
-                {interviewStarted && !interviewComplete && (
-                  <div className="mt-4 bg-indigo-50 p-3 rounded-md border border-indigo-100 shadow-inner">
-                    <p className="text-sm text-indigo-800 font-medium">
-                      Question {currentQuestion + 1} of {questionSet.length}
-                    </p>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                      <div 
-                        className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" 
-                        style={{ width: `${((currentQuestion + 1) / questionSet.length) * 100}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-indigo-600 mt-2">
-                      {isListening ? "Listening to your answer..." : isSpeaking ? "AI is speaking..." : "Click 'Answer Question' to respond"}
+
+                  <div className="mt-8 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 p-4 rounded-lg">
+                    <p className="text-sm text-center text-indigo-900 font-medium">
+                      Our AI evaluates your responses based on relevance, clarity, detail, and technical accuracy
                     </p>
                   </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Design elements to replace the team section */}
-            <div className="space-y-6 md:col-span-5">
-              <div className="glass-panel p-6 rounded-xl border border-white/20 h-full flex flex-col justify-between">
-                <div className="space-y-8">
-                  <div className="relative">
-                    <div className="absolute -top-6 -left-6 w-24 h-24 bg-purple-400 rounded-full opacity-20 blur-xl"></div>
-                    <div className="absolute -bottom-10 -right-10 w-36 h-36 bg-indigo-400 rounded-full opacity-20 blur-xl"></div>
-                    <h2 className="text-2xl font-semibold text-center text-indigo-800 relative z-10">Interview Tips</h2>
-                  </div>
-                  
-                  <div className="space-y-6 relative z-10">
-                    <div className="team-card p-4">
-                      <h3 className="text-lg font-medium mb-2 text-purple-800">Speak Clearly</h3>
-                      <p className="text-sm text-gray-600">Articulate your thoughts at a moderate pace. This helps our AI understand your responses better.</p>
-                    </div>
-
-                    <div className="team-card p-4 pulse">
-                      <h3 className="text-lg font-medium mb-2 text-purple-800">Be Concise</h3>
-                      <p className="text-sm text-gray-600">While detailed answers are good, try to stay focused on addressing the specific question asked.</p>
-                    </div>
-
-                    <div className="team-card p-4">
-                      <h3 className="text-lg font-medium mb-2 text-purple-800">Use Examples</h3>
-                      <p className="text-sm text-gray-600">Support your answers with relevant examples from your experience to make your responses more compelling.</p>
-                    </div>
-                    
-                    <div className="team-card p-4 floating">
-                      <h3 className="text-lg font-medium mb-2 text-purple-800">Structure Your Answers</h3>
-                      <p className="text-sm text-gray-600">For complex questions, use a framework like STAR (Situation, Task, Action, Result) to organize your thoughts.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 p-4 rounded-lg">
-                  <p className="text-sm text-center text-indigo-900 font-medium">
-                    Our AI evaluates your responses based on relevance, clarity, detail, and technical accuracy
-                  </p>
                 </div>
               </div>
             </div>
-          </div>
+            
+            <div className="mt-12">
+              <h2 className="text-2xl font-semibold text-center text-indigo-800 mb-6">Interview Monitoring</h2>
+              <FaceDetectionVideo />
+            </div>
+          </>
         )}
       </div>
     </div>
