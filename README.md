@@ -60,6 +60,11 @@ This project is built with .
 - shadcn-ui
 - Tailwind CSS
 
+- ## Features:
+-  Interview Monitering:
+-  ![image](https://github.com/user-attachments/assets/4b291aeb-8800-4ae4-9a7a-b6479b93a8fc)
+
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/0505e234-d0d3-49ea-b43b-77440934a9cb) and click on Share -> Publish.
