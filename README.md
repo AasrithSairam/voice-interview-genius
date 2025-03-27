@@ -60,9 +60,12 @@ This project is built with .
 - shadcn-ui
 - Tailwind CSS
 
-- ## Features:
+- ## Added Features:
 -  Interview Monitering:
 -  ![image](https://github.com/user-attachments/assets/4b291aeb-8800-4ae4-9a7a-b6479b93a8fc)
+-  ![image](https://github.com/user-attachments/assets/d016e976-d550-4414-85df-351bbe9e5b34)
+-  
+
 
 
 ## How can I deploy this project?
